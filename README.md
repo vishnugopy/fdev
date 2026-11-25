@@ -25,7 +25,7 @@ Also: pin the menu open, drag images to the menu bar, keep your last screenshot 
 
 ## Requirements
 
-macOS 26 or later. Detect Font and Clean Keyboard need Accessibility permission (System Settings → Privacy & Security → Accessibility).
+macOS 26 or later on an Apple Silicon Mac. Detect Font and Clean Keyboard need Accessibility permission (System Settings → Privacy & Security → Accessibility).
 
 ## Build
 

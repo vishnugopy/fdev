@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fdev — the frontend toolkit in your Mac's menu bar</title>
+<meta name="description" content="fdev is a native macOS menu bar app for frontend developers: color picker, font detector, screen ruler, contrast checker, CSS generators, image converter, on-device background remover and an action wheel.">
+<meta property="og:title" content="fdev — frontend toolkit for macOS">
+<meta property="og:description" content="Pick colors, detect fonts, measure the screen, remove backgrounds — from the menu bar or one shortcut.">
+<meta property="og:image" content="assets/icon.png">
+<link rel="icon" href="assets/icon.png">
+<style>
+  :root {
+    --bg: #0f1012;
+    --surface: #17181b;
+    --surface-2: #1e1f23;
+    --line: rgba(255,255,255,.09);
+    --text: #f2f3f5;
+    --muted: #a3a6ad;
+    --accent: #4f8cff;
+    --accent-ink: #0b1a33;
+    --radius: 14px;
+    --max: 1120px;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f6f7; --surface: #ffffff; --surface-2: #efeff1;
+      --line: rgba(0,0,0,.09); --text: #16171a; --muted: #5d6068;
+      --accent: #1f66e5; --accent-ink: #ffffff;
+      color-scheme: light;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  }
+  a { color: var(--accent); text-underline-offset: 3px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 clamp(20px, 5vw, 40px); }
+  .skip { position: absolute; left: -9999px; }
+  .skip:focus { left: 16px; top: 16px; background: var(--surface); padding: 8px 12px; z-index: 10; }
+
+  /* Header */
+  header.top { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--line); }
+  header.top .wrap { display: flex; align-items: center; gap: 12px; min-height: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); text-decoration: none; }
+  .brand img { width: 28px; height: 28px; }
+  nav.links { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+  nav.links a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 8px; font-size: 14px; }
+  nav.links a:hover { color: var(--text); background: var(--surface-2); }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 10px;
+    font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid transparent; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { color: var(--text); border-color: var(--line); background: var(--surface); }
+  .btn-ghost:hover { background: var(--surface-2); }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: clamp(32px, 6vw, 72px);
+    align-items: center; padding: clamp(48px, 9vw, 104px) 0 clamp(40px, 7vw, 80px); }
+  .hero h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.04; letter-spacing: -.025em; margin: 18px 0 18px; }
+  .hero p.lead { font-size: clamp(17px, 2vw, 20px); color: var(--muted); max-width: 34em; margin: 0 0 28px; }
+  .hero .icon { width: 84px; height: 84px; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .fine { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .shot { justify-self: center; width: min(360px, 100%); }
+  .shot img { width: 100%; height: auto; display: block; border-radius: 14px; border: 1px solid var(--line);
+    box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+
+  /* Sections */
+  section { padding: clamp(48px, 8vw, 88px) 0; border-top: 1px solid var(--line); }
+  .eyebrow { color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 10px; }
+  h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.12; letter-spacing: -.02em; margin: 0 0 14px; }
+  .intro { color: var(--muted); max-width: 40em; margin: 0 0 36px; font-size: 17px; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+  .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin: 32px 0 12px; }
+  .group-title:first-of-type { margin-top: 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+  .card { background: var(--surface); border-radius: var(--radius); padding: 20px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .card .head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .badge { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: var(--surface-2); font-size: 16px; font-weight: 700; }
+  .card h3 { margin: 0; }
+  kbd { font: 600 12px/1 ui-monospace, "SF Mono", monospace; padding: 4px 6px; border-radius: 6px;
+    background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+  .card .keys { margin-left: auto; }
+
+  /* Wheel */
+  .wheel-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 72px); align-items: center; }
+  .wheel { width: min(380px, 100%); aspect-ratio: 1; justify-self: center; }
+  .wheel svg { width: 100%; height: 100%; overflow: visible; }
+  .wheel .slice { fill: transparent; cursor: pointer; transition: fill .12s; }
+  .wheel .slice:hover, .wheel .slice:focus-visible, .wheel .slice.on { fill: color-mix(in srgb, var(--text) 10%, transparent); outline: none; }
+  .wheel .dot { fill: var(--surface-2); transition: fill .12s; }
+  .wheel .on + .dot, .wheel .slice:hover + .dot, .wheel .slice:focus-visible + .dot { fill: var(--accent); }
+  .wheel text { fill: var(--text); font: 600 15px -apple-system, system-ui, sans-serif; pointer-events: none; }
+  .wheel .num { fill: var(--muted); font-size: 10px; }
+  .steps { padding: 0; margin: 0; list-style: none; counter-reset: s; display: grid; gap: 14px; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; }
+  .steps li::before { content: counter(s); width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2);
+    display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .steps p { margin: 2px 0 0; color: var(--muted); }
+
+  /* Shortcuts table */
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+  th, td { text-align: left; padding: 14px 18px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); }
+
+  /* Install */
+  .install { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; counter-reset: i; }
+  .install .card { counter-increment: i; }
+  .install .card h3::before { content: counter(i) ". "; color: var(--accent); }
+  .install code, .card code { font: 13px ui-monospace, "SF Mono", monospace; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; }
+
+  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+
+  @media (max-width: 820px) {
+    .hero, .wheel-row { grid-template-columns: minmax(0, 1fr); }
+    nav.links { display: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/icon.png" alt="" width="28" height="28">fdev</a>
+    <nav class="links" aria-label="Sections">
+      <a href="#tools">Tools</a>
+      <a href="#wheel">Action wheel</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#shortcuts">Shortcuts</a>
+      <a href="#install">Install</a>
+    </nav>
+    <a class="btn btn-primary" href="https://github.com/vishnugopy/fdev/releases/latest">Download</a>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap">
+    <div class="hero" id="top">
+      <div>
+        <img class="icon" src="assets/icon.png" alt="fdev app icon" width="84" height="84">
+        <h1>The frontend toolkit that lives in your menu bar.</h1>
+        <p class="lead">Pick a color from any window, name the font under your cursor, measure the screen, check contrast, write CSS and clean up images. Native macOS, one click or one shortcut away, and everything runs on your Mac.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/vishnugopy/fdev/releases/latest">Download for macOS</a>
+          <a class="btn btn-ghost" href="https://github.com/vishnugopy/fdev">View source on GitHub</a>
+        </div>
+        <p class="fine">Free · Requires macOS 26 Tahoe · Apple silicon &amp; Intel · Signed with Developer ID and notarized by Apple</p>
+      </div>
+      <figure class="shot" style="margin:0">
+        <img src="assets/menu.png" alt="The fdev menu: tools grouped under Pick &amp; inspect, CSS, Images and Code, with their keyboard shortcuts" width="360" height="661">
+      </figure>
+    </div>
+  </div>
+
+  <section id="tools" aria-labelledby="tools-h">
+    <div class="wrap">
+      <p class="eyebrow">Ten tools</p>
+      <h2 id="tools-h">Everything you reach for between the browser and the editor.</h2>
+      <p class="intro">Each tool opens from the menu bar, its own shortcut, or the action wheel. Results are copied for you, with a small pop-up to confirm.</p>
+
+      <h3 class="group-title">Pick &amp; inspect</h3>
+      <div class="grid">
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">◉</span><h3>Pick Color</h3><span class="keys"><kbd>⌥⌘C</kbd></span></div>
+          <p>The system loupe samples any pixel on any display. Copy as HEX, RGB, HSL, Display P3, a SwiftUI <code>Color</code> or a CSS variable, with a history of recent picks.</p>
+        </article>
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">◐</span><h3>Check Contrast</h3></div>
+          <p>WCAG 2.2 contrast ratio for any text and background pair, with AA and AAA results for normal and large text.</p>
+        </article>
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">Aa</span><h3>Detect Font</h3><span class="keys"><kbd>⌥⌘F</kbd></span></div>
+          <p>Hover text in Safari, Chrome or any native app to get its family, weight and size. fdev also tells you if it's on Google Fonts and writes the <code>font-family</code> stack.</p>
+        </article>
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">⟷</span><h3>Measure Screen</h3><span class="keys"><kbd>⌥⌘M</kbd></span></div>
+          <p>Drag a ruler across anything on screen to read its width and height in points. Press Return or ⌘C to copy the size, Esc to cancel.</p>
+        </article>
+      </div>
+
+      <h3 class="group-title">CSS</h3>
+      <div class="grid">
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">⇄</span><h3>Convert px ↔ rem</h3></div>
+          <p>Type in either field with your own root size. Commas and dots both work as decimals.</p>
+        </article>
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">A</span><h3>Generate Fluid Type</h3></div>
+          <p>Set min and max sizes and viewport widths to get a ready-to-paste <code>clamp()</code> value.</p>
+        </article>
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">▣</span><h3>Build Box Shadow</h3></div>
+          <p>Layer shadows with a live preview and presets from sm to 2xl. Export as CSS, a Tailwind class or SwiftUI.</p>
+        </article>
+      </div>
+
+      <h3 class="group-title">Images</h3>
+      <div class="grid">
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">▤</span><h3>Convert Image</h3></div>
+          <p>Resize and compress to AVIF, JPEG, PNG or HEIC, or copy as a data URI.</p>
+        </article>
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">✂</span><h3>Remove Background</h3></div>
+          <p>Apple Vision lifts the subject from photos. For logos and icons on a flat color, fdev removes that color, even inside letters and rings, with clean edges. Fill with any color, crop to the subject, or drop many files at once.</p>
+        </article>
+      </div>
+
+      <h3 class="group-title">Code</h3>
+      <div class="grid">
+        <article class="card">
+          <div class="head"><span class="badge" aria-hidden="true">{ }</span><h3>Transform Text &amp; JSON</h3></div>
+          <p>Format, minify or sort JSON. Base64 and URL encode and decode. Switch between camelCase, PascalCase, kebab-case, snake_case and CONST_CASE.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="wheel" aria-labelledby="wheel-h">
+    <div class="wrap wheel-row">
+      <div>
+        <p class="eyebrow">Action wheel</p>
+        <h2 id="wheel-h">One shortcut, every tool.</h2>
+        <p class="intro">Hold <kbd>⌥Space</kbd> and a Liquid Glass wheel opens around your cursor, like a weapon wheel in a game. Point toward a tool and let go.</p>
+        <ol class="steps">
+          <li><div><strong>Hold the shortcut</strong><p>The wheel appears where your cursor is, with nothing selected.</p></div></li>
+          <li><div><strong>Point at a tool</strong><p>Its badge turns blue and its name shows in the middle.</p></div></li>
+          <li><div><strong>Release</strong><p>The tool runs. Or tap the shortcut and click a slice, press 1–9, or Esc to close.</p></div></li>
+        </ol>
+        <p class="fine">Choose which tools appear and in what order, and change the shortcut, in Settings → Wheel.</p>
+      </div>
+      <div class="wheel" role="img" aria-label="Illustration of the action wheel with eight tools arranged in a circle">
+        <svg viewBox="-160 -160 320 320" id="wheel-svg" aria-hidden="true"></svg>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow" aria-labelledby="workflow-h">
+    <div class="wrap">
+      <p class="eyebrow">Small things that add up</p>
+      <h2 id="workflow-h">Made for the way you actually work.</h2>
+      <p class="intro">fdev stays out of the way until you need it, then saves you a trip to a browser tab.</p>
+      <div class="grid">
+        <article class="card"><h3>Drag to the menu bar</h3><p>Start dragging an image toward the fdev icon and the menu opens with drop targets for Remove Background and Convert Image.</p></article>
+        <article class="card"><h3>Last screenshot, kept</h3><p>Your most recent ⇧⌘3/4/5 screenshot waits at the top of the menu. Copy it, drag it out, remove its background or convert it.</p></article>
+        <article class="card"><h3>Pin the menu</h3><p>Pin the dropdown so it stays open while you click Finder or another app to drag files in.</p></article>
+        <article class="card"><h3>Clean Keyboard</h3><p>Lock every key, including media keys, for 60 seconds so you can wipe the keyboard. Unlock any time with the mouse.</p></article>
+        <article class="card"><h3>Copy pop-up</h3><p>A short confirmation whenever something is copied. Choose how long it shows and where on screen, or turn it off.</p></article>
+        <article class="card"><h3>Syncs with iCloud Drive</h3><p>Shortcuts, wheel layout, tool settings and color history follow you to every Mac.</p></article>
+        <article class="card"><h3>Native and quiet</h3><p>Styled like the system's Wi-Fi menu, with light and dark mode. It shows in the Dock only while a window is open, and can launch at login.</p></article>
+        <article class="card"><h3>Private by design</h3><p>Color picking, font detection and background removal all run on your Mac. Images are never uploaded. The only network request is the public Google Fonts list.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="shortcuts" aria-labelledby="shortcuts-h">
+    <div class="wrap">
+      <p class="eyebrow">Keyboard</p>
+      <h2 id="shortcuts-h">Default shortcuts</h2>
+      <p class="intro">They work from any app. Change or turn off each one in Settings → Shortcuts, which also has a live test so you can see a combination arrive.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Action</th><th scope="col">Shortcut</th><th scope="col">Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Action wheel</td><td><kbd>⌥Space</kbd></td><td>Hold to aim, release to run. Presets: ⌥Tab, ⌃⌥Space, ⌥⌘W, F13.</td></tr>
+            <tr><td>Pick a color</td><td><kbd>⌥⌘C</kbd></td><td>Copies in your chosen format.</td></tr>
+            <tr><td>Detect font</td><td><kbd>⌥⌘F</kbd></td><td>Copies the font name under the cursor.</td></tr>
+            <tr><td>Measure screen</td><td><kbd>⌥⌘M</kbd></td><td>Return or ⌘C copies, Esc cancels.</td></tr>
+            <tr><td>Settings</td><td><kbd>⌘,</kbd></td><td>When fdev is in front.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" aria-labelledby="install-h">
+    <div class="wrap">
+      <p class="eyebrow">Get started</p>
+      <h2 id="install-h">Install in a minute</h2>
+      <div class="install">
+        <article class="card"><h3>Download</h3><p>Get <code>fdev.dmg</code> from the <a href="https://github.com/vishnugopy/fdev/releases/latest">latest release</a>. It's signed and notarized, so macOS opens it without warnings.</p></article>
+        <article class="card"><h3>Drag to Applications</h3><p>Open the disk image, drag fdev into Applications, then launch it. The icon appears in your menu bar.</p></article>
+        <article class="card"><h3>Allow Accessibility</h3><p>Detect Font and Clean Keyboard need it: System Settings → Privacy &amp; Security → Accessibility → turn on fdev. Everything else works without it.</p></article>
+      </div>
+      <p class="fine">Building from source: <code>./build.sh</code> in the repo, with Xcode 26 or later.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>fdev by Vishnu Gopy</span>
+    <a href="https://github.com/vishnugopy/fdev">GitHub</a>
+    <a href="https://github.com/vishnugopy/fdev/issues">Report an issue</a>
+  </div>
+</footer>
+
+<script>
+  // Interactive wheel illustration (decorative; the content is described in the text beside it).
+  (function () {
+    const tools = [["◉","Pick Color"],["Aa","Detect Font"],["⟷","Measure"],["◐","Contrast"],["⇄","px ↔ rem"],["▣","Shadow"],["▤","Convert"],["{ }","Text & JSON"]];
+    const svg = document.getElementById("wheel-svg"), ns = "http://www.w3.org/2000/svg";
+    const R = 150, r = 58, n = tools.length, span = 2 * Math.PI / n, gap = .035;
+    const el = (t, a) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+    const pt = (rad, a) => [rad * Math.sin(a), -rad * Math.cos(a)];
+    svg.append(el("circle", { r: R, fill: "var(--surface)", stroke: "var(--line)" }));
+    svg.append(el("circle", { r: r, fill: "none", stroke: "var(--line)" }));
+    const label = el("text", { "text-anchor": "middle", y: 5 }); label.textContent = "fdev";
+    tools.forEach(([glyph, name], i) => {
+      const s = i * span - span / 2 + gap, e = s + span - 2 * gap;
+      const [ax, ay] = pt(R - 6, s), [bx, by] = pt(R - 6, e), [cx, cy] = pt(r + 4, e), [dx, dy] = pt(r + 4, s);
+      const path = el("path", { class: "slice", d: `M${ax},${ay} A${R-6},${R-6} 0 0 1 ${bx},${by} L${cx},${cy} A${r+4},${r+4} 0 0 0 ${dx},${dy} Z` });
+      const [x, y] = pt((r + R) / 2 + 2, i * span);
+      const dot = el("circle", { class: "dot", cx: x, cy: y - 6, r: 17 });
+      const g = el("text", { x, y: y - 1, "text-anchor": "middle" }); g.textContent = glyph;
+      const num = el("text", { class: "num", x, y: y + 24, "text-anchor": "middle" }); num.textContent = i + 1;
+      const set = on => { path.classList.toggle("on", on); label.textContent = on ? name : "fdev"; };
+      path.addEventListener("mouseenter", () => set(true));
+      path.addEventListener("mouseleave", () => set(false));
+      svg.append(path, dot, g, num);
+    });
+    svg.append(label);
+    // Gentle demo highlight when the wheel scrolls into view (skipped with reduced motion).
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const slices = svg.querySelectorAll(".slice");
+      new IntersectionObserver((entries, o) => {
+        if (!entries[0].isIntersecting) return; o.disconnect();
+        let i = 0; const t = setInterval(() => {
+          slices.forEach(s => s.classList.remove("on"));
+          if (i < 3) { slices[[1, 4, 6][i]].classList.add("on"); label.textContent = tools[[1, 4, 6][i]][1]; i++; }
+          else { clearInterval(t); label.textContent = "fdev"; }
+        }, 700);
+      }, { threshold: .6 }).observe(svg);
+    }
+  })();
+</script>
+</body>
+</html>

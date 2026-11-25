@@ -3,7 +3,7 @@
 <h1 align="center">fdev</h1>
 <p align="center">The frontend toolkit that lives in your Mac's menu bar.</p>
 
-<p align="center"><a href="https://github.com/vishnugopy/fdev/releases/latest"><b>Download</b></a> · <a href="https://vishnugopy.github.io/fdev/">Website</a></p>
+<p align="center"><a href="https://github.com/vishnugopy/fdev/releases/latest/download/fdev.dmg"><b>Download fdev.dmg</b></a> · <a href="https://vishnugopy.github.io/fdev/">Website</a></p>
 
 Pick a color from any window, name the font under your cursor, measure the screen, check contrast, write CSS and clean up images — from the menu bar, one shortcut each, or an action wheel. Native SwiftUI, everything on-device.
 
